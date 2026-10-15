@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copa dos Amigos — eFootball</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0e1a;
+    --bg-card: #131a2b;
+    --bg-card2: #1a2338;
+    --border: #2a3550;
+    --accent: #00d4ff;
+    --accent2: #00ff88;
+    --gold: #ffd700;
+    --text: #e8eefc;
+    --text-dim: #8892b0;
+    --danger: #ff4757;
+    --win: #00ff88;
+    --draw: #ffd700;
+    --loss: #ff4757;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(0,212,255,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 100%, rgba(0,255,136,0.06) 0%, transparent 50%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  header {
+    text-align: center;
+    padding: 30px 20px;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card2) 100%);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(from 0deg, transparent, rgba(0,212,255,0.1), transparent 30%);
+    animation: rotate 8s linear infinite;
+  }
+  @keyframes rotate { to { transform: rotate(360deg); } }
+  header > * { position: relative; z-index: 1; }
+
+  h1 {
+    font-size: 2.2em;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: var(--text-dim); font-size: 0.95em; }
+
+  section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  h2 {
+    font-size: 1.3em;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+  }
+  h2 .icon { font-size: 1.2em; }
+
+  /* SETUP */
+  .setup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .player-input {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+  .player-input:focus-within { border-color: var(--accent); }
+  .player-input label {
+    display: block;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .player-input input[type=text] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 1em;
+    margin-bottom: 10px;
+  }
+  .player-input input[type=text]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  /* TEAM PICKER */
+  .team-picker-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .team-picker-btn:hover { border-color: var(--accent); }
+  .team-picker-btn .flag-img {
+    width: 40px; height: 28px;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #222;
+    flex-shrink: 0;
+  }
+  .team-picker-btn .crest-img {
+    width: 32px; height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .team-picker-btn .tp-info { flex: 1; min-width: 0; }
+  .team-picker-btn .tp-name {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .team-picker-btn .tp-sub {
+    font-size: 0.72em;
+    color: var(--text-dim);
+  }
+  .team-picker-btn .tp-chevron { color: var(--text-dim); font-size: 1.2em; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    animation: pop 0.2s ease;
+  }
+  @keyframes pop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .modal-header h3 { font-size: 1.15em; }
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.6em;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 6px;
+  }
+  .modal-close:hover { color: var(--danger); }
+
+  .modal-search {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-search input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 0.95em;
+  }
+  .modal-search input:focus { outline: none; border-color: var(--accent); }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 12px 22px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 10px 14px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab:hover { color: var(--text); }
+
+  .modal-body {
+    padding: 16px 22px 22px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .team-item {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .team-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    background: rgba(0,212,255,0.06);
+  }
+  .team-item .flag-img {
+    width: 34px; height: 24px;
+    object-fit: cover;
+    border-radius: 3px;
+    background: #222;
+    flex-shrink: 0;
+  }
+  .team-item .crest-img {
+    width: 30px; height: 30px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .team-item .ti-name {
+    font-size: 0.85em;
+    font-weight: 600;
+    line-height: 1.2;
+    overflow: hidden;
+  }
+
+  /* FORMAT SELECTOR */
+  .format-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .format-card {
+    background: var(--bg-card2);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .format-card:hover { border-color: var(--accent); }
+  .format-card.selected {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,255,136,0.04));
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+  }
+  .format-card .fc-badge {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: var(--accent);
+    color: #001018;
+    font-size: 0.7em;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+  .format-card h4 {
+    font-size: 1.05em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .format-card p {
+    font-size: 0.82em;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .format-card .fc-meta {
+    margin-top: 10px;
+    font-size: 0.75em;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .group-toggle {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .group-toggle .gt-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9em;
+  }
+  .group-toggle .gt-label strong { color: var(--accent); }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--border);
+    border-radius: 28px;
+    transition: 0.3s;
+  }
+  .slider:before {
+    content: "";
+    position: absolute;
+    height: 22px; width: 22px;
+    left: 3px; bottom: 3px;
+    background: var(--text);
+    border-radius: 50%;
+    transition: 0.3s;
+  }
+  .switch input:checked + .slider { background: var(--accent2); }
+  .switch input:checked + .slider:before { transform: translateX(24px); }
+
+  /* BUTTONS */
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #0099cc);
+    color: #001018;
+    width: 100%;
+    padding: 14px;
+    font-size: 1em;
+    margin-top: 16px;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,212,255,0.3);
+  }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-secondary {
+    background: var(--bg-card2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 8px 14px; font-size: 0.85em; }
+
+  /* MATCHES */
+  .round-title {
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin: 22px 0 10px;
+    font-weight: 700;
+  }
+  .round-title:first-child { margin-top: 0; }
+
+  .match {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .match .match-team {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95em;
+    min-width: 0;
+  }
+  .match .match-team.home { justify-content: flex-end; text-align: right; }
+  .match .match-team.away { justify-content: flex-start; text-align: left; }
+  .match .match-team .flag-img {
+    width: 30px; height: 20px;
+    object-fit: cover;
+    border-radius: 3px;
+    background: #222;
+    flex-shrink: 0;
+  }
+  .match .match-team .crest-img {
+    width: 26px; height: 26px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .match .match-team .mt-text { min-width: 0; }
+  .match .match-team .pname {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .match .match-team .tname {
+    font-size: 0.72em;
+    color: var(--text-dim);
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .score-inputs { display: flex; align-items: center; gap: 6px; }
+  .score-inputs input {
+    width: 48px; height: 48px;
+    text-align: center;
+    font-size: 1.3em;
+    font-weight: 700;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    -moz-appearance: textfield;
+  }
+  .score-inputs input::-webkit-outer-spin-button,
+  .score-inputs input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .score-inputs input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+  }
+  .score-inputs .x { color: var(--text-dim); font-weight: 700; }
+
+  /* STANDINGS */
+  table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+  thead th {
+    text-align: center;
+    padding: 12px 8px;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    border-bottom: 2px solid var(--border);
+    font-weight: 700;
+  }
+  thead th.left { text-align: left; }
+  tbody td {
+    text-align: center;
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  tbody td.left { text-align: left; }
+  tbody tr:hover { background: rgba(0,212,255,0.04); }
+
+  .pos-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: 800;
+    background: var(--bg-card2);
+    color: var(--text-dim);
+  }
+  .pos-1 { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; }
+  .pos-2 { background: linear-gradient(135deg, #c0c0c0, #909090); color: #000; }
+  .pos-3 { background: linear-gradient(135deg, #cd7f32, #a05a1f); color: #000; }
+
+  .team-cell { display: flex; align-items: center; gap: 10px; }
+  .team-cell .flag-img {
+    width: 30px; height: 20px;
+    object-fit: cover;
+    border-radius: 3px;
+    background: #222;
+    flex-shrink: 0;
+  }
+  .team-cell .crest-img {
+    width: 26px; height: 26px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .team-cell .pname { font-weight: 700; }
+  .team-cell .tname { font-size: 0.75em; color: var(--text-dim); font-weight: 400; }
+
+  .pts { color: var(--accent); font-size: 1.1em; font-weight: 800; }
+  .sg-pos { color: var(--win); }
+  .sg-neg { color: var(--loss); }
+  .sg-zero { color: var(--text-dim); }
+
+  .form-dots { display: flex; gap: 3px; justify-content: center; }
+  .dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6em;
+    font-weight: 800;
+    color: #000;
+  }
+  .dot.V { background: var(--win); }
+  .dot.E { background: var(--draw); }
+  .dot.D { background: var(--loss); color: #fff; }
+
+  /* GROUP STANDINGS (formato copa) */
+  .group-block {
+    margin-bottom: 24px;
+  }
+  .group-block h3 {
+    font-size: 0.95em;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  /* FINAL / KNOCKOUT */
+  .final-box {
+    background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(0,212,255,0.05));
+    border: 1px solid var(--gold);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+  }
+  .final-title {
+    font-size: 1.1em;
+    color: var(--gold);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 20px;
+  }
+  .final-matchup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .final-team {
+    flex: 1;
+    min-width: 150px;
+    padding: 16px;
+    background: var(--bg-card2);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .final-team .label {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+  .final-team .name { font-size: 1.05em; font-weight: 800; }
+  .final-team .team { font-size: 0.8em; color: var(--text-dim); }
+  .final-team .flag-img {
+    width: 48px; height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #222;
+  }
+  .final-team .crest-img {
+    width: 44px; height: 44px;
+    object-fit: contain;
+  }
+  .final-vs { font-size: 1.5em; font-weight: 800; color: var(--gold); }
+
+  .final-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .final-score input {
+    width: 60px; height: 60px;
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: 800;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    -moz-appearance: textfield;
+  }
+  .final-score input::-webkit-outer-spin-button,
+  .final-score input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .final-score input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255,215,0,0.2);
+  }
+  .final-score .x { font-size: 1.4em; color: var(--gold); font-weight: 800; }
+
+  .champion {
+    margin-top: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,170,0,0.08));
+    border-radius: 12px;
+    border: 1px solid var(--gold);
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  @keyframes glow {
+    from { box-shadow: 0 0 20px rgba(255,215,0,0.2); }
+    to { box-shadow: 0 0 40px rgba(255,215,0,0.4); }
+  }
+  .champion .trophy { font-size: 3em; margin-bottom: 8px; }
+  .champion .title {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .champion .name { font-size: 1.6em; font-weight: 800; }
+  .champion .team { font-size: 0.9em; color: var(--text-dim); }
+
+  .pending {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.9em;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .hidden { display: none !important; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--bg-card2);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    transition: transform 0.3s;
+    z-index: 1000;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 1.5em; }
+    .match { gap: 6px; padding: 10px; }
+    .match .match-team { font-size: 0.78em; }
+    .match .match-team .flag-img { width: 22px; height: 15px; }
+    .match .match-team .crest-img { width: 20px; height: 20px; }
+    .score-inputs input { width: 38px; height: 38px; font-size: 1em; }
+    table { font-size: 0.78em; }
+    thead th, tbody td { padding: 8px 4px; }
+    .pos-badge { width: 22px; height: 22px; font-size: 0.75em; }
+    .form-dots, .form-col { display: none; }
+    .team-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>⚽ COPA DOS AMIGOS</h1>
+    <p class="subtitle">eFootball • 3 Jogadores • Escolha o formato</p>
+  </header>
+
+  <!-- SETUP -->
+  <section id="setup-section">
+    <h2><span class="icon">👥</span> Jogadores e Times</h2>
+    <div class="setup-grid" id="players-setup"></div>
+  </section>
+
+  <!-- FORMATO -->
+  <section id="format-section">
+    <h2><span class="icon">🏆</span> Formato do Torneio</h2>
+
+    <div class="format-options">
+      <div class="format-card selected" data-format="liga" onclick="selectFormat('liga')">
+        <div class="fc-badge">RECOMENDADO</div>
+        <h4>📊 Liga Curta</h4>
+        <p>Todos jogam contra todos em turno e returno (6 jogos). Os 2 melhores vão para a final em jogo único.</p>
+        <div class="fc-meta">6 jogos + 1 final = 7 partidas</div>
+      </div>
+
+      <div class="format-card" data-format="copa" onclick="selectFormat('copa')">
+        <h4>🏆 Padrão Copa do Mundo</h4>
+        <p>Formato de Copa: fase de grupos + semifinal + final. Você escolhe se quer fase de grupos ou ir direto ao mata-mata.</p>
+        <div class="fc-meta" id="copa-meta">Configurável abaixo</div>
+      </div>
+    </div>
+
+    <div id="group-toggle-box" class="group-toggle hidden">
+      <div class="gt-label">
+        <span style="font-size:1.4em">🌍</span>
+        <span>
+          <strong>Fase de Grupos</strong><br>
+          <span style="font-size:0.8em;color:var(--text-dim)">Turno e returno entre todos (6 jogos) antes do mata-mata</span>
+        </span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="useGroups" checked onchange="updateCopaMeta()">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <button class="btn-primary" id="startBtn" onclick="startTournament()">🚀 Iniciar Torneio</button>
+  </section>
+
+  <!-- TOURNAMENT -->
+  <div id="tournament" class="hidden">
+    <section>
+      <h2><span class="icon">📅</span> <span id="matches-title">Jogos</span></h2>
+      <div id="matches-container"></div>
+    </section>
+
+    <section>
+      <h2><span class="icon">📊</span> <span id="standings-title">Classificação</span></h2>
+      <div id="standings-container"></div>
+    </section>
+
+    <section>
+      <h2><span class="icon">🏆</span> <span id="final-title-section">Final</span></h2>
+      <div id="final-container"></div>
+    </section>
+
+    <section>
+      <div class="actions">
+        <button class="btn-secondary btn-sm" onclick="resetScores()">🔄 Zerar Placares</button>
+        <button class="btn-secondary btn-sm" onclick="resetAll()">🗑️ Novo Torneio</button>
+        <button class="btn-secondary btn-sm" onclick="exportData()">📋 Exportar Resultados</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- MODAL SELETOR DE TIME -->
+<div class="modal-overlay" id="teamModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Escolher Time</h3>
+      <button class="modal-close" onclick="closeTeamModal()">✕</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="selecoes" onclick="switchTab('selecoes')">🌍 Seleções</button>
+      <button class="tab" data-tab="clubes" onclick="switchTab('clubes')">⚽ Clubes</button>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="teamSearch" placeholder="🔍 Buscar time..." oninput="filterTeams()">
+    </div>
+    <div class="modal-body">
+      <div class="team-grid" id="teamGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   BASE DE DADOS DE TIMES
+   ============================================================ */
+const SELECOES = [
+  { name: 'Brasil', code: 'br', flag: '🇧🇷' },
+  { name: 'Argentina', code: 'ar', flag: '🇦🇷' },
+  { name: 'França', code: 'fr', flag: '🇫🇷' },
+  { name: 'Alemanha', code: 'de', flag: '🇩🇪' },
+  { name: 'Espanha', code: 'es', flag: '🇪🇸' },
+  { name: 'Inglaterra', code: 'gb-eng', flag: '🏴' },
+  { name: 'Portugal', code: 'pt', flag: '🇵🇹' },
+  { name: 'Itália', code: 'it', flag: '🇮🇹' },
+  { name: 'Holanda', code: 'nl', flag: '🇳🇱' },
+  { name: 'Bélgica', code: 'be', flag: '🇧🇪' },
+  { name: 'Croácia', code: 'hr', flag: '🇭🇷' },
+  { name: 'Uruguai', code: 'uy', flag: '🇺🇾' },
+  { name: 'México', code: 'mx', flag: '🇲🇽' },
+  { name: 'Estados Unidos', code: 'us', flag: '🇺🇸' },
+  { name: 'Japão', code: 'jp', flag: '🇯🇵' },
+  { name: 'Coreia do Sul', code: 'kr', flag: '🇰🇷' },
+  { name: 'Marrocos', code: 'ma', flag: '🇲🇦' },
+  { name: 'Senegal', code: 'sn', flag: '🇸🇳' },
+  { name: 'Colômbia', code: 'co', flag: '🇨🇴' },
+  { name: 'Chile', code: 'cl', flag: '🇨🇱' },
+  { name: 'Peru', code: 'pe', flag: '🇵🇪' },
+  { name: 'Equador', code: 'ec', flag: '🇪🇨' },
+  { name: 'Suíça', code: 'ch', flag: '🇨🇭' },
+  { name: 'Dinamarca', code: 'dk', flag: '🇩🇰' },
+  { name: 'Suécia', code: 'se', flag: '🇸🇪' },
+  { name: 'Polônia', code: 'pl', flag: '🇵🇱' },
+  { name: 'Sérvia', code: 'rs', flag: '🇷🇸' },
+  { name: 'Gana', code: 'gh', flag: '🇬🇭' },
+  { name: 'Nigéria', code: 'ng', flag: '🇳🇬' },
+  { name: 'Camarões', code: 'cm', flag: '🇨🇲' },
+  { name: 'Austrália', code: 'au', flag: '🇦🇺' },
+  { name: 'Canadá', code: 'ca', flag: '🇨🇦' },
+];
+
+const CLUBES = [
+  { name: 'Real Madrid', league: 'La Liga', crest: 'https://crests.football-data.org/86.png' },
+  { name: 'Barcelona', league: 'La Liga', crest: 'https://crests.football-data.org/81.png' },
+  { name: 'Atlético de Madrid', league: 'La Liga', crest: 'https://crests.football-data.org/78.png' },
+  { name: 'Manchester City', league: 'Premier League', crest: 'https://crests.football-data.org/65.png' },
+  { name: 'Manchester United', league: 'Premier League', crest: 'https://crests.football-data.org/66.png' },
+  { name: 'Liverpool', league: 'Premier League', crest: 'https://crests.football-data.org/64.png' },
+  { name: 'Chelsea', league: 'Premier League', crest: 'https://crests.football-data.org/61.png' },
+  { name: 'Arsenal', league: 'Premier League', crest: 'https://crests.football-data.org/57.png' },
+  { name: 'Tottenham', league: 'Premier League', crest: 'https://crests.football-data.org/73.png' },
+  { name: 'Juventus', league: 'Serie A', crest: 'https://crests.football-data.org/109.png' },
+  { name: 'Inter de Milão', league: 'Serie A', crest: 'https://crests.football-data.org/108.png' },
+  { name: 'Milan', league: 'Serie A', crest: 'https://crests.football-data.org/98.png' },
+  { name: 'Napoli', league: 'Serie A', crest: 'https://crests.football-data.org/113.png' },
+  { name: 'Roma', league: 'Serie A', crest: 'https://crests.football-data.org/100.png' },
+  { name: 'Bayern de Munique', league: 'Bundesliga', crest: 'https://crests.football-data.org/5.png' },
+  { name: 'Borussia Dortmund', league: 'Bundesliga', crest: 'https://crests.football-data.org/4.png' },
+  { name: 'RB Leipzig', league: 'Bundesliga', crest: 'https://crests.football-data.org/721.png' },
+  { name: 'PSG', league: 'Ligue 1', crest: 'https://crests.football-data.org/524.png' },
+  { name: 'Marseille', league: 'Ligue 1', crest: 'https://crests.football-data.org/516.png' },
+  { name: 'Lyon', league: 'Ligue 1', crest: 'https://crests.football-data.org/523.png' },
+  { name: 'Ajax', league: 'Eredivisie', crest: 'https://crests.football-data.org/678.png' },
+  { name: 'PSV', league: 'Eredivisie', crest: 'https://crests.football-data.org/674.png' },
+  { name: 'Benfica', league: 'Liga Portugal', crest: 'https://crests.football-data.org/1903.png' },
+  { name: 'Porto', league: 'Liga Portugal', crest: 'https://crests.football-data.org/503.png' },
+  { name: 'Sporting', league: 'Liga Portugal', crest: 'https://crests.football-data.org/498.png' },
+  { name: 'Flamengo', league: 'Brasileirão', crest: 'https://crests.football-data.org/1783.png' },
+  { name: 'Palmeiras', league: 'Brasileirão', crest: 'https://crests.football-data.org/1769.png' },
+  { name: 'Corinthians', league: 'Brasileirão', crest: 'https://crests.football-data.org/1776.png' },
+  { name: 'São Paulo', league: 'Brasileirão', crest: 'https://crests.football-data.org/1770.png' },
+  { name: 'Fluminense', league: 'Brasileirão', crest: 'https://crests.football-data.org/1781.png' },
+  { name: 'Vasco', league: 'Brasileirão', crest: 'https://crests.football-data.org/1782.png' },
+  { name: 'Botafogo', league: 'Brasileirão', crest: 'https://crests.football-data.org/1778.png' },
+  { name: 'Cruzeiro', league: 'Brasileirão', crest: 'https://crests.football-data.org/1777.png' },
+  { name: 'Atlético-MG', league: 'Brasileirão', crest: 'https://crests.football-data.org/1765.png' },
+  { name: 'Grêmio', league: 'Brasileirão', crest: 'https://crests.football-data.org/1780.png' },
+  { name: 'Internacional', league: 'Brasileirão', crest: 'https://crests.football-data.org/1775.png' },
+  { name: 'Santos', league: 'Brasileirão', crest: 'https://crests.football-data.org/1771.png' },
+];
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+const STORAGE_KEY = 'copa_amigos_v2';
+
+let state = {
+  format: 'liga',            // 'liga' | 'copa'
+  useGroups: true,           // só para copa
+  players: [],               // {name, teamType:'selecao'|'clube', teamName, teamCode, crest, flag}
+  matches: [],               // jogos da fase de grupos/liga
+  semifinal: null,           // {home, away, hs, as}
+  final: null,               // {home, away, hs, as}
+  phase: 'setup',            // setup | groups | knockout | done
+  editingPlayerIdx: null,
+  currentTab: 'selecoes'
+};
+
+/* ============================================================
+   RENDER SETUP DE JOGADORES
+   ============================================================ */
+function renderPlayersSetup() {
+  const container = document.getElementById('players-setup');
+  container.innerHTML = '';
+
+  for (let i = 0; i < 3; i++) {
+    const p = state.players[i] || null;
+    const div = document.createElement('div');
+    div.className = 'player-input';
+
+    const teamLabel = p
+      ? `<div style="font-weight:700">${escapeHtml(p.teamName)}</div>
+         <div style="font-size:0.75em;color:var(--text-dim)">${p.teamType === 'selecao' ? 'Seleção' : 'Clube'}</div>`
+      : `<div style="color:var(--text-dim);font-size:0.9em">Nenhum time escolhido</div>`;
+
+    const iconHtml = p
+      ? (p.teamType === 'selecao'
+          ? `<img class="flag-img" src="https://flagcdn.com/w80/${p.teamCode}.png" alt="${escapeHtml(p.teamName)}" onerror="this.style.display='none'">`
+          : `<img class="crest-img" src="${p.crest}" alt="${escapeHtml(p.teamName)}" onerror="this.style.display='none'">`)
+      : `<span style="font-size:1.8em">❓</span>`;
+
+    div.innerHTML = `
+      <label>Jogador ${i+1}</label>
+      <input type="text" id="p${i}name" placeholder="Nome do jogador" maxlength="20"
+             value="${p ? escapeHtml(p.name) : 'Jogador ' + (i+1)}"
+             oninput="updatePlayerName(${i}, this.value)">
+      <button class="team-picker-btn" onclick="openTeamModal(${i})">
+        ${iconHtml}
+        <div class="tp-info">
+          <div class="tp-name">${p ? escapeHtml(p.teamName) : 'Escolher time'}</div>
+          <div class="tp-sub">${p ? (p.teamType === 'selecao' ? 'Seleção' : 'Clube') : 'Clique para escolher'}</div>
+        </div>
+        <span class="tp-chevron">›</span>
+      </button>
+    `;
+    container.appendChild(div);
+  }
+
+  updateStartButton();
+}
+
+function updatePlayerName(i, value) {
+  if (!state.players[i]) state.players[i] = { name: value, teamType: null, teamName: null };
+  else state.players[i].name = value;
+  saveState();
+  updateStartButton();
+}
+
+/* ============================================================
+   MODAL DE TIMES
+   ============================================================ */
+function openTeamModal(playerIdx) {
+  state.editingPlayerIdx = playerIdx;
+  document.getElementById('modal-title').textContent = `Escolher time — Jogador ${playerIdx+1}`;
+  document.getElementById('teamModal').classList.add('show');
+  document.getElementById('teamSearch').value = '';
+  renderTeamGrid();
+}
+
+function closeTeamModal() {
+  document.getElementById('teamModal').classList.remove('show');
+  state.editingPlayerIdx = null;
+}
+
+function switchTab(tab) {
+  state.currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  renderTeamGrid();
+}
+
+function renderTeamGrid() {
+  const grid = document.getElementById('teamGrid');
+  const search = (document.getElementById('teamSearch').value || '').toLowerCase().trim();
+  grid.innerHTML = '';
+
+  const list = state.currentTab === 'selecoes' ? SELECOES : CLUBES;
+
+  const filtered = list.filter(t => {
+    if (!search) return true;
+    const name = t.name.toLowerCase();
+    const league = (t.league || '').toLowerCase();
+    return name.includes(search) || league.includes(search);
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text-dim);padding:30px">Nenhum time encontrado</div>`;
+    return;
+  }
+
+  filtered.forEach(t => {
+    const item = document.createElement('button');
+    item.className = 'team-item';
+    item.onclick = () => pickTeam(t);
+
+    if (state.currentTab === 'selecoes') {
+      item.innerHTML = `
+        <img class="flag-img" src="https://flagcdn.com/w80/${t.code}.png" alt="${escapeHtml(t.name)}" onerror="this.style.display='none'">
+        <span class="ti-name">${escapeHtml(t.name)}</span>
+      `;
+    } else {
+      item.innerHTML = `
+        <img class="crest-img" src="${t.crest}" alt="${escapeHtml(t.name)}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 30 30%22><circle cx=%2215%22 cy=%2215%22 r=%2214%22 fill=%22%23333%22/><text x=%2215%22 y=%2220%22 text-anchor=%22middle%22 fill=%22%23888%22 font-size=%2212%22>?</text></svg>'">
+        <span class="ti-name">${escapeHtml(t.name)}</span>
+      `;
+    }
+    grid.appendChild(item);
+  });
+}
+
+function filterTeams() {
+  renderTeamGrid();
+}
+
+function pickTeam(t) {
+  const idx = state.editingPlayerIdx;
+  if (idx === null) return;
+
+  if (!state.players[idx]) state.players[idx] = { name: `Jogador ${idx+1}` };
+
+  if (state.currentTab === 'selecoes') {
+    state.players[idx].teamType = 'selecao';
+    state.players[idx].teamName = t.name;
+    state.players[idx].teamCode = t.code;
+    state.players[idx].flag = t.flag;
+    state.players[idx].crest = null;
+  } else {
+    state.players[idx].teamType = 'clube';
+    state.players[idx].teamName = t.name;
+    state.players[idx].crest = t.crest;
+    state.players[idx].teamCode = null;
+    state.players[idx].flag = null;
+  }
+
+  saveState();
+  renderPlayersSetup();
+  closeTeamModal();
+  showToast(`✅ ${t.name} escolhido!`);
+}
+
+/* ============================================================
+   FORMATO
+   ============================================================ */
+function selectFormat(fmt) {
+  state.format = fmt;
+  document.querySelectorAll('.format-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.format === fmt);
+  });
+  document.getElementById('group-toggle-box').classList.toggle('hidden', fmt !== 'copa');
+  updateCopaMeta();
+  saveState();
+}
+
+function updateCopaMeta() {
+  const useGroups = document.getElementById('useGroups').checked;
+  state.useGroups = useGroups;
+
+  const meta = document.getElementById('copa-meta');
+  if (useGroups) {
+    meta.textContent = '6 jogos (grupo) + semi + final = 8 partidas';
+  } else {
+    meta.textContent = 'Semi + final = 3 partidas';
+  }
+  saveState();
+}
+
+/* ============================================================
+   INICIAR TORNEIO
+   ============================================================ */
+function updateStartButton() {
+  const btn = document.getElementById('startBtn');
+  const ok = state.players.length === 3 && state.players.every(p => p && p.teamName);
+  btn.disabled = !ok;
+  if (!ok) btn.textContent = '⚠️ Escolha os 3 times para começar';
+  else btn.textContent = '🚀 Iniciar Torneio';
+}
+
+function startTournament() {
+  const ok = state.players.length === 3 && state.players.every(p => p && p.teamName);
+  if (!ok) { showToast('⚠️ Escolha os 3 times primeiro!'); return; }
+
+  // Garantir nomes
+  state.players.forEach((p, i) => {
+    if (!p.name || !p.name.trim()) p.name = `Jogador ${i+1}`;
+  });
+
+  state.phase = 'groups';
+  buildMatches();
+
+  document.getElementById('setup-section').classList.add('hidden');
+  document.getElementById('format-section').classList.add('hidden');
+  document.getElementById('tournament').classList.remove('hidden');
+
+  // Ajustar títulos conforme formato
+  if (state.format === 'liga') {
+    document.getElementById('matches-title').textContent = 'Jogos — Liga (Turno e Returno)';
+    document.getElementById('standings-title').textContent = 'Classificação';
+    document.getElementById('final-title-section').textContent = 'Final';
+  } else {
+    if (state.useGroups) {
+      document.getElementById('matches-title').textContent = 'Jogos — Fase de Grupos';
+      document.getElementById('standings-title').textContent = 'Classificação do Grupo';
+      document.getElementById('final-title-section').textContent = 'Mata-Mata';
+    } else {
+      document.getElementById('matches-title').textContent = 'Jogos — Mata-Mata';
+      document.getElementById('standings-title').textContent = 'Times';
+      document.getElementById('final-title-section').textContent = 'Mata-Mata';
+    }
+  }
+
+  render();
+  showToast('Torneio iniciado! Boa sorte 🍀');
+}
+
+/* ============================================================
+   GERAÇÃO DE JOGOS
+   ============================================================ */
+function buildMatches() {
+  state.matches = [];
+  state.semifinal = null;
+  state.final = null;
+  state.phase = 'groups';
+
+  const pairs = [[0,1],[0,2],[1,2]];
+  let id = 0;
+
+  // TURNO
+  pairs.forEach(([h, a]) => {
+    state.matches.push({
+      id: id++, round: 'Turno', home: h, away: a, hs: null, as: null, leg: 1
+    });
+  });
+  // RETURN0
+  pairs.forEach(([h, a]) => {
+    state.matches.push({
+      id: id++, round: 'Returno', home: a, away: h, hs: null, as: null, leg: 2
+    });
+  });
+
+  if (state.format === 'copa') {
+    state.semifinal = { home: null, away: null, hs: null, as: null };
+    state.final = { home: null, away: null, hs: null, as: null };
+  } else {
+    state.final = { home: null, away: null, hs: null, as: null };
+  }
+}
+
+/* ============================================================
+   CLASSIFICAÇÃO
+   ============================================================ */
+function computeStandings() {
+  const table = state.players.map((p, i) => ({
+    idx: i, name: p.name, team: p.teamName,
+    teamType: p.teamType, teamCode: p.teamCode, crest: p.crest, flag: p.flag,
+    pts: 0, j: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, sg: 0,
+    form: [], h2h: {}
+  }));
+
+  state.matches.forEach(m => {
+    if (m.hs === null || m.as === null) return;
+    const H = table[m.home], A = table[m.away];
+    H.j++; A.j++;
+    H.gp += m.hs; H.gc += m.as;
+    A.gp += m.as; A.gc += m.hs;
+
+    if (m.hs > m.as) {
+      H.pts += 3; H.v++; A.d++;
+      H.form.push('V'); A.form.push('D');
+      H.h2h[m.away] = (H.h2h[m.away]||0) + 3;
+    } else if (m.hs < m.as) {
+      A.pts += 3; A.v++; H.d++;
+      A.form.push('V'); H.form.push('D');
+      A.h2h[m.home] = (A.h2h[m.home]||0) + 3;
+    } else {
+      H.pts++; A.pts++; H.e++; A.e++;
+      H.form.push('E'); A.form.push('E');
+      H.h2h[m.away] = (H.h2h[m.away]||0) + 1;
+      A.h2h[m.home] = (A.h2h[m.home]||0) + 1;
+    }
+  });
+
+  table.forEach(t => t.sg = t.gp - t.gc);
+
+  table.sort((a, b) => {
+    if (b.pts !== a.pts) return b.pts - a.pts;
+    if (b.sg !== a.sg) return b.sg - a.sg;
+    if (b.gp !== a.gp) return b.gp - a.gp;
+    const h2hA = a.h2h[b.idx] || 0;
+    const h2hB = b.h2h[a.idx] || 0;
+    if (h2hB !== h2hA) return h2hB - h2hA;
+    return a.name.localeCompare(b.name);
+  });
+
+  return table;
+}
+
+/* ============================================================
+   RENDER GERAL
+   ============================================================ */
+function render() {
+  renderMatches();
+  renderStandings();
+  renderKnockout();
+  saveState();
+}
+
+/* ---------- HELPERS DE ESCUDO/BANDEIRA ---------- */
+function teamIconHtml(p, size = 'normal') {
+  if (!p) return '';
+  const flagClass = size === 'big' ? 'flag-img big' : 'flag-img';
+  const crestClass = size === 'big' ? 'crest-img big' : 'crest-img';
+
+  if (p.teamType === 'selecao' && p.teamCode) {
+    return `<img class="${flagClass}" src="https://flagcdn.com/w80/${p.teamCode}.png" alt="" onerror="this.style.display='none'">`;
+  }
+  if (p.teamType === 'clube' && p.crest) {
+    return `<img class="${crestClass}" src="${p.crest}" alt="" onerror="this.style.visibility='hidden'">`;
+  }
+  return '';
+}
+
+/* ---------- MATCHES ---------- */
+function renderMatches() {
+  const container = document.getElementById('matches-container');
+  container.innerHTML = '';
+
+  const rounds = ['Turno', 'Returno'];
+  rounds.forEach(roundName => {
+    const list = state.matches.filter(m => m.round === roundName);
+    if (list.length === 0) return;
+
+    const title = document.createElement('div');
+    title.className = 'round-title';
+    title.textContent = roundName;
+    container.appendChild(title);
+
+    list.forEach(m => container.appendChild(buildMatchEl(m)));
+  });
+}
+
+function buildMatchEl(m) {
+  const el = document.createElement('div');
+  el.className = 'match';
+
+  const H = state.players[m.home];
+  const A = state.players[m.away];
+
+  el.innerHTML = `
+    <div class="match-team home">
+      ${teamIconHtml(H)}
+      <div class="mt-text">
+        <div class="pname">${escapeHtml(H.name)}</div>
+        <div class="tname">${escapeHtml(H.teamName)}</div>
+      </div>
+    </div>
+    <div class="score-inputs">
+      <input type="number" min="0" max="99" value="${m.hs ?? ''}"
+             oninput="setScore(${m.id}, 'hs', this.value)">
+      <span class="x">×</span>
+      <input type="number" min="0" max="99" value="${m.as ?? ''}"
+             oninput="setScore(${m.id}, 'as', this.value)">
+    </div>
+    <div class="match-team away">
+      <div class="mt-text">
+        <div class="pname">${escapeHtml(A.name)}</div>
+        <div class="tname">${escapeHtml(A.teamName)}</div>
+      </div>
+      ${teamIconHtml(A)}
+    </div>
+  `;
+  return el;
+}
+
+function setScore(id, field, value) {
+  const m = state.matches.find(x => x.id === id);
+  if (!m) return;
+  m[field] = clampScore(value);
+  renderStandings();
+  renderKnockout();
+  saveState();
+}
+
+function clampScore(v) {
+  if (v === '' || v === null) return null;
+  let n = parseInt(v);
+  if (isNaN(n)) return null;
+  if (n < 0) n = 0;
+  if (n > 99) n = 99;
+  return n;
+}
+
+/* ---------- STANDINGS ---------- */
+function renderStandings() {
+  const container = document.getElementById('standings-container');
+  const table = computeStandings();
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th class="left">Jogador</th>
+          <th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th>
+          <th>GP</th><th>GC</th><th>SG</th>
+          <th class="form-col">Forma</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  table.forEach((t, i) => {
+    const sgClass = t.sg > 0 ? 'sg-pos' : t.sg < 0 ? 'sg-neg' : 'sg-zero';
+    const sgText = t.sg > 0 ? `+${t.sg}` : t.sg;
+    const formHtml = t.form.slice(-5).map(f =>
+      `<span class="dot ${f}">${f}</span>`
+    ).join('');
+
+    const icon = teamIconHtml(state.players[t.idx]);
+
+    html += `
+      <tr>
+        <td><span class="pos-badge pos-${i+1}">${i+1}</span></td>
+        <td class="left">
+          <div class="team-cell">
+            ${icon}
+            <div>
+              <div class="pname">${escapeHtml(t.name)}</div>
+              <div class="tname">${escapeHtml(t.team)}</div>
+            </div>
+          </div>
+        </td>
+        <td class="pts">${t.pts}</td>
+        <td>${t.j}</td>
+        <td>${t.v}</td>
+        <td>${t.e}</td>
+        <td>${t.d}</td>
+        <td>${t.gp}</td>
+        <td>${t.gc}</td>
+        <td class="${sgClass}">${sgText}</td>
+        <td class="form-col"><div class="form-dots">${formHtml || '—'}</div></td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+/* ---------- KNOCKOUT (semi + final) ---------- */
+function renderKnockout() {
+  const container = document.getElementById('final-container');
+  const table = computeStandings();
+  const allPlayed = state.matches.every(m => m.hs !== null && m.as !== null);
+
+  // -------- FORMATO LIGA --------
+  if (state.format === 'liga') {
+    if (!allPlayed) {
+      const remaining = state.matches.filter(m => m.hs === null || m.as === null).length;
+      container.innerHTML = `<div class="pending">⏳ Faltam <strong>${remaining}</strong> jogo(s) para definir os finalistas.</div>`;
+      return;
+    }
+    const first = table[0], second = table[1];
+    state.final.home = first.idx;
+    state.final.away = second.idx;
+    container.innerHTML = buildFinalBoxHTML(state.final, '🏆 Grande Final 🏆', '1º Lugar', '2º Lugar');
+    return;
+  }
+
+  // -------- FORMATO COPA --------
+  // Se não tiver grupos → vai direto pro mata-mata (semi: 1º x 2º e 3º já eliminado? 
+  // Com 3 jogadores sem grupos, fazemos: 2º x 3º na semi, 1º vai direto à final)
+  if (state.format === 'copa' && !state.useGroups) {
+    // Sem grupos: mata-mata direto — mas com 3 jogadores, fazemos semi 2ºx3º e final 1º x vencedor
+    // Sorteio: usamos os índices 0,1,2 na ordem de inscrição
+    // Semi: Jogador 2 x Jogador 3
+    state.semifinal.home = 1;
+    state.semifinal.away = 2;
+
+    const H = state.players[state.semifinal.home];
+    const A = state.players[state.semifinal.away];
+    const semiDone = state.semifinal.hs !== null && state.semifinal.as !== null;
+
+    let semiWinnerIdx = null;
+    if (semiDone) {
+      if (state.semifinal.hs > state.semifinal.as) semiWinnerIdx = state.semifinal.home;
+      else if (state.semifinal.as > state.semifinal.hs) semiWinnerIdx = state.semifinal.away;
+      else semiWinnerIdx = null; // empate → decidir pênaltis
+    }
+
+    let html = '';
+
+    // Semi
+    html += `
+      <div class="round-title">Semifinal</div>
+      <div class="match">
+        <div class="match-team home">
+          ${teamIconHtml(H)}
+          <div class="mt-text">
+            <div class="pname">${escapeHtml(H.name)}</div>
+            <div class="tname">${escapeHtml(H.teamName)}</div>
+          </div>
+        </div>
+        <div class="score-inputs">
+          <input type="number" min="0" max="99" value="${state.semifinal.hs ?? ''}"
+                 oninput="setSemiScore('hs', this.value)">
+          <span class="x">×</span>
+          <input type="number" min="0" max="99" value="${state.semifinal.as ?? ''}"
+                 oninput="setSemiScore('as', this.value)">
+        </div>
+        <div class="match-team away">
+          <div class="mt-text">
+            <div class="pname">${escapeHtml(A.name)}</div>
+            <div class="tname">${escapeHtml(A.teamName)}</div>
+          </div>
+          ${teamIconHtml(A)}
+        </div>
+      </div>
+    `;
+
+    // Final
+    html += `<div class="round-title">Final</div>`;
+    if (semiWinnerIdx === null && semiDone) {
+      html += `<div class="pending">⚖️ Semifinal empatada — decidam nos pênaltis e ajustem o placar.</div>`;
+    } else if (semiWinnerIdx === null) {
+      html += `<div class="pending">⏳ Aguardando resultado da semifinal.</div>`;
+    } else {
+      state.final.home = 0; // Jogador 1 vai direto à final (cabeça de chave)
+      state.final.away = semiWinnerIdx;
+      html += buildFinalBoxHTML(state.final, '🏆 Grande Final 🏆', 'Cabeça de Chave', 'Vencedor da Semi');
+    }
+
+    container.innerHTML = html;
+    return;
+  }
+
+  // -------- COPA COM GRUPOS --------
+  if (!allPlayed) {
+    const remaining = state.matches.filter(m => m.hs === null || m.as === null).length;
+    container.innerHTML = `<div class="pending">⏳ Faltam <strong>${remaining}</strong> jogo(s) de grupo para definir o mata-mata.</div>`;
+    return;
+  }
+
+  // Classificados: 1º e 2º vão pra final (com 3 jogadores, a "semi" é pulada)
+  // Para simular Copa de verdade: 2º x 3º na semi, 1º vai direto à final
+  const first = table[0], second = table[1], third = table[2];
+
+  state.semifinal.home = second.idx;
+  state.semifinal.away = third.idx;
+
+  const HS = state.players[state.semifinal.home];
+  const AS = state.players[state.semifinal.away];
+  const semiDone = state.semifinal.hs !== null && state.semifinal.as !== null;
+
+  let semiWinnerIdx = null;
+  if (semiDone) {
+    if (state.semifinal.hs > state.semifinal.as) semiWinnerIdx = state.semifinal.home;
+    else if (state.semifinal.as > state.semifinal.hs) semiWinnerIdx = state.semifinal.away;
+    else semiWinnerIdx = null;
+  }
+
+  let html = '';
+
+  // Info dos classificados
+  html += `<div class="pending" style="text-align:left;font-style:normal;margin-bottom:16px">
+    🥇 <strong>${escapeHtml(first.name)}</strong> (${escapeHtml(first.team)}) — classificado direto à final<br>
+    🥈 <strong>${escapeHtml(second.name)}</strong> (${escapeHtml(second.team)}) — vai para a semi<br>
+    🥉 <strong>${escapeHtml(third.name)}</strong> (${escapeHtml(third.team)}) — vai para a semi
+  </div>`;
+
+  html += `
+    <div class="round-title">Semifinal</div>
+    <div class="match">
+      <div class="match-team home">
+        ${teamIconHtml(HS)}
+        <div class="mt-text">
+          <div class="pname">${escapeHtml(HS.name)}</div>
+          <div class="tname">${escapeHtml(HS.teamName)}</div>
+        </div>
+      </div>
+      <div class="score-inputs">
+        <input type="number" min="0" max="99" value="${state.semifinal.hs ?? ''}"
+               oninput="setSemiScore('hs', this.value)">
+        <span class="x">×</span>
+        <input type="number" min="0" max="99" value="${state.semifinal.as ?? ''}"
+               oninput="setSemiScore('as', this.value)">
+      </div>
+      <div class="match-team away">
+        <div class="mt-text">
+          <div class="pname">${escapeHtml(AS.name)}</div>
+          <div class="tname">${escapeHtml(AS.teamName)}</div>
+        </div>
+        ${teamIconHtml(AS)}
+      </div>
+    </div>
+  `;
+
+  html += `<div class="round-title">Final</div>`;
+  if (semiWinnerIdx === null && semiDone) {
+    html += `<div class="pending">⚖️ Semifinal empatada — decidam nos pênaltis e ajustem o placar.</div>`;
+  } else if (semiWinnerIdx === null) {
+    html += `<div class="pending">⏳ Aguardando resultado da semifinal.</div>`;
+  } else {
+    state.final.home = first.idx;
+    state.final.away = semiWinnerIdx;
+    html += buildFinalBoxHTML(state.final, '🏆 Grande Final 🏆', '1º Lugar', 'Vencedor da Semi');
+  }
+
+  container.innerHTML = html;
+}
+
+function setSemiScore(field, value) {
+  if (!state.semifinal) return;
+  state.semifinal[field] = clampScore(value);
+  renderKnockout();
+  saveState();
+}
+
+function buildFinalBoxHTML(final, title, labelHome, labelAway) {
+  if (final.home === null || final.away === null) {
+    return `<div class="pending">⏳ Aguardando definição dos finalistas.</div>`;
+  }
+
+  const H = state.players[final.home];
+  const A = state.players[final.away];
+
+  let championHtml = '';
+  if (final.hs !== null && final.as !== null) {
+    let champIdx = null;
+    if (final.hs > final.as) champIdx = final.home;
+    else if (final.as > final.hs) champIdx = final.away;
+
+    if (champIdx !== null) {
+      const C = state.players[champIdx];
+      championHtml = `
+        <div class="champion">
+          <div class="trophy">🏆</div>
+          <div class="title">Campeão</div>
+          <div class="name">${escapeHtml(C.name)}</div>
+          <div class="team">${escapeHtml(C.teamName)}</div>
+        </div>
+      `;
+    } else {
+      championHtml = `
+        <div class="champion">
+          <div class="trophy">⚖️</div>
+          <div class="title">Empate na Final</div>
+          <div class="name">Decidam nos pênaltis!</div>
+          <div class="team">Ajustem o placar após a decisão</div>
+        </div>
+      `;
+    }
+  }
+
+  return `
+    <div class="final-box">
+      <div class="final-title">${title}</div>
+      <div class="final-matchup">
+        <div class="final-team">
+          <div class="label">${labelHome}</div>
+          ${teamIconHtml(H, 'big')}
+          <div class="name">${escapeHtml(H.name)}</div>
+          <div class="team">${escapeHtml(H.teamName)}</div>
+        </div>
+        <div class="final-vs">VS</div>
+        <div class="final-team">
+          <div class="label">${labelAway}</div>
+          ${teamIconHtml(A, 'big')}
+          <div class="name">${escapeHtml(A.name)}</div>
+          <div class="team">${escapeHtml(A.teamName)}</div>
+        </div>
+      </div>
+      <div class="final-score">
+        <input type="number" min="0" max="99" value="${final.hs ?? ''}"
+               oninput="setFinalScore('hs', this.value)">
+        <span class="x">×</span>
+        <input type="number" min="0" max="99" value="${final.as ?? ''}"
+               oninput="setFinalScore('as', this.value)">
+      </div>
+      ${championHtml}
+    </div>
+  `;
+}
+
+function setFinalScore(field, value) {
+  if (!state.final) return;
+  state.final[field] = clampScore(value);
+  renderKnockout();
+  saveState();
+}
+
+/* ============================================================
+   AÇÕES
+   ============================================================ */
+function resetScores() {
+  if (!confirm('Zerar todos os placares? Os jogadores e times serão mantidos.')) return;
+  state.matches.forEach(m => { m.hs = null; m.as = null; });
+  if (state.semifinal) { state.semifinal.hs = null; state.semifinal.as = null; }
+  if (state.final) { state.final.hs = null; state.final.as = null; }
+  render();
+  showToast('Placares zerados.');
+}
+
+function resetAll() {
+  if (!confirm('Começar um novo torneio? Todos os dados serão apagados.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function exportData() {
+  const table = computeStandings();
+  const lines = [];
+  lines.push('=== COPA DOS AMIGOS — eFootball ===');
+  lines.push(`Formato: ${state.format === 'liga' ? 'Liga Curta' : 'Copa do Mundo' + (state.useGroups ? ' (com grupos)' : ' (sem grupos)')}`);
+  lines.push('');
+  lines.push('--- CLASSIFICAÇÃO ---');
+  table.forEach((t, i) => {
+    lines.push(`${i+1}. ${t.name} (${t.team}) — ${t.pts}pts | J:${t.j} V:${t.v} E:${t.e} D:${t.d} | GP:${t.gp} GC:${t.gc} SG:${t.sg}`);
+  });
+  lines.push('');
+  lines.push('--- JOGOS ---');
+  state.matches.forEach(m => {
+    const H = state.players[m.home], A = state.players[m.away];
+    const hs = m.hs ?? '-', as = m.as ?? '-';
+    lines.push(`[${m.round}] ${H.name} ${hs} x ${as} ${A.name}`);
+  });
+
+  if (state.semifinal && state.semifinal.home !== null) {
+    const H = state.players[state.semifinal.home], A = state.players[state.semifinal.away];
+    const hs = state.semifinal.hs ?? '-', as = state.semifinal.as ?? '-';
+    lines.push('');
+    lines.push('--- SEMIFINAL ---');
+    lines.push(`${H.name} ${hs} x ${as} ${A.name}`);
+  }
+
+  if (state.final && state.final.home !== null) {
+    const H = state.players[state.final.home], A = state.players[state.final.away];
+    const hs = state.final.hs ?? '-', as = state.final.as ?? '-';
+    lines.push('');
+    lines.push('--- FINAL ---');
+    lines.push(`${H.name} ${hs} x ${as} ${A.name}`);
+  }
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('📋 Resultados copiados!');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 Resultados copiados!');
+  });
+}
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ============================================================
+   PERSISTÊNCIA
+   ============================================================ */
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== 'object') return false;
+    state = Object.assign(state, s);
+    return true;
+  } catch(e) { return false; }
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(function init() {
+  const loaded = loadState();
+
+  // Se já tem torneio em andamento, pula setup
+  if (loaded && state.players.length === 3 && state.players.every(p => p && p.teamName)) {
+    if (state.matches && state.matches.length > 0) {
+      document.getElementById('setup-section').classList.add('hidden');
+      document.getElementById('format-section').classList.add('hidden');
+      document.getElementById('tournament').classList.remove('hidden');
+      if (state.format === 'liga') {
+        document.getElementById('matches-title').textContent = 'Jogos — Liga (Turno e Returno)';
+        document.getElementById('standings-title').textContent = 'Classificação';
+        document.getElementById('final-title-section').textContent = 'Final';
+      } else {
+        document.getElementById('matches-title').textContent = state.useGroups ? 'Jogos — Fase de Grupos' : 'Jogos — Mata-Mata';
+        document.getElementById('standings-title').textContent = state.useGroups ? 'Classificação do Grupo' : 'Times';
+        document.getElementById('final-title-section').textContent = 'Mata-Mata';
+      }
+      // Sincronizar UI do formato
+      document.querySelectorAll('.format-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.format === state.format);
+      });
+      document.getElementById('group-toggle-box').classList.toggle('hidden', state.format !== 'copa');
+      document.getElementById('useGroups').checked = state.useGroups;
+      updateCopaMeta();
+      render();
+      return;
+    }
+  }
+
+  // Setup inicial
+  if (!state.players || state.players.length !== 3) {
+    state.players = [];
+  }
+  renderPlayersSetup();
+  document.querySelectorAll('.format-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.format === state.format);
+  });
+  document.getElementById('group-toggle-box').classList.toggle('hidden', state.format !== 'copa');
+  document.getElementById('useGroups').checked = state.useGroups;
+  updateCopaMeta();
+
+  // Fechar modal ao clicar no overlay
+  document.getElementById('teamModal').addEventListener('click', (e) => {
+    if (e.target.id === 'teamModal') closeTeamModal();
+  });
+})();
+</script>
+</body>
+</html>
