@@ -1416,6 +1416,8 @@ function renderStandings() {
 }
 
 /* ---------- KNOCKOUT (semi + final) ---------- */
+
+/* ---------- KNOCKOUT (semi + final) ---------- */
 function renderKnockout() {
   const container = document.getElementById('final-container');
   const table = computeStandings();
@@ -1428,7 +1430,6 @@ function renderKnockout() {
     if (!allPlayed) {
       const remaining = state.matches.filter(m => m.hs === null || m.as === null).length;
       container.innerHTML = `<div class="pending">⏳ Faltam <strong>${remaining}</strong> jogo(s) para definir os finalistas.</div>`;
-      // Limpa final para não deixar classificados antigos grudados
       state.final = { home: null, away: null, hs: null, as: null };
       return;
     }
@@ -1436,12 +1437,10 @@ function renderKnockout() {
     const first = table[0], second = table[1];
     const newHome = first.idx, newAway = second.idx;
 
-    // Se mudou quem se classificou, zera o placar da final
-    if (state.final.home !== newHome || state.final.away !== newAway) {
-      state.final = { home: newHome, away: newAway, hs: null, as: null };
-    } else {
-      state.final.home = newHome;
-      state.final.away = newAway;
+    if (!state.final || state.final.home !== newHome || state.final.away !== newAway) {
+      const oldHs = state.final && state.final.home === newHome && state.final.away === newAway ? state.final.hs : null;
+      const oldAs = state.final && state.final.home === newHome && state.final.away === newAway ? state.final.as : null;
+      state.final = { home: newHome, away: newAway, hs: oldHs, as: oldAs };
     }
 
     container.innerHTML = buildFinalBoxHTML(state.final, '🏆 Grande Final 🏆', '1º Lugar', '2º Lugar');
@@ -1452,9 +1451,8 @@ function renderKnockout() {
   // FORMATO COPA
   // ============================================================
 
-  // ---------- COPA SEM FASE DE GRUPOS ----------
-  if (state.format === 'copa' && !state.useGroups) {
-    // Sem grupos: semi = Jogador 2 x Jogador 3; Jogador 1 vai direto à final
+  // -------- COPA SEM FASE DE GRUPOS --------
+  if (!state.useGroups) {
     const semiHome = 1, semiAway = 2;
 
     if (!state.semifinal || state.semifinal.home !== semiHome || state.semifinal.away !== semiAway) {
@@ -1470,7 +1468,6 @@ function renderKnockout() {
     if (semiDone) {
       if (state.semifinal.hs > state.semifinal.as) semiWinnerIdx = state.semifinal.home;
       else if (state.semifinal.as > state.semifinal.hs) semiWinnerIdx = state.semifinal.away;
-      // empate → null, precisa decidir nos pênaltis
     }
 
     let html = '';
@@ -1511,9 +1508,9 @@ function renderKnockout() {
       html += `<div class="pending">⚖️ Semifinal empatada — decidam nos pênaltis e ajustem o placar.</div>`;
       state.final = { home: null, away: null, hs: null, as: null };
     } else {
-      const newHome = 0; // Jogador 1 vai direto à final
+      const newHome = 0;
       const newAway = semiWinnerIdx;
-      if (state.final.home !== newHome || state.final.away !== newAway) {
+      if (!state.final || state.final.home !== newHome || state.final.away !== newAway) {
         state.final = { home: newHome, away: newAway, hs: null, as: null };
       }
       html += buildFinalBoxHTML(state.final, '🏆 Grande Final 🏆', 'Cabeça de Chave', 'Vencedor da Semi');
@@ -1522,6 +1519,92 @@ function renderKnockout() {
     container.innerHTML = html;
     return;
   }
+
+  // -------- COPA COM FASE DE GRUPOS --------
+  if (!allPlayed) {
+    const remaining = state.matches.filter(m => m.hs === null || m.as === null).length;
+    container.innerHTML = `<div class="pending">⏳ Faltam <strong>${remaining}</strong> jogo(s) de grupo para definir o mata-mata.</div>`;
+    state.semifinal = { home: null, away: null, hs: null, as: null };
+    state.final = { home: null, away: null, hs: null, as: null };
+    return;
+  }
+
+  // Grupos completos → classificados definidos
+  const first = table[0], second = table[1], third = table[2];
+
+  const semiHome = second.idx, semiAway = third.idx;
+
+  // Só reseta se os classificados mudaram
+  if (!state.semifinal || state.semifinal.home !== semiHome || state.semifinal.away !== semiAway) {
+    state.semifinal = { home: semiHome, away: semiAway, hs: null, as: null };
+    state.final = { home: null, away: null, hs: null, as: null };
+  }
+
+  const HS = state.players[state.semifinal.home];
+  const AS = state.players[state.semifinal.away];
+  const semiDone = state.semifinal.hs !== null && state.semifinal.as !== null;
+
+  let semiWinnerIdx = null;
+  if (semiDone) {
+    if (state.semifinal.hs > state.semifinal.as) semiWinnerIdx = state.semifinal.home;
+    else if (state.semifinal.as > state.semifinal.hs) semiWinnerIdx = state.semifinal.away;
+  }
+
+  let html = '';
+
+  html += `<div class="pending" style="text-align:left;font-style:normal;margin-bottom:16px">
+    🥇 <strong>${escapeHtml(first.name)}</strong> (${escapeHtml(first.team)}) — classificado direto à final<br>
+    🥈 <strong>${escapeHtml(second.name)}</strong> (${escapeHtml(second.team)}) — vai para a semi<br>
+    🥉 <strong>${escapeHtml(third.name)}</strong> (${escapeHtml(third.team)}) — vai para a semi
+  </div>`;
+
+  // ---- SEMIFINAL (sempre renderiza se grupos completos) ----
+  html += `
+    <div class="round-title">Semifinal</div>
+    <div class="match">
+      <div class="match-team home">
+        ${teamIconHtml(HS)}
+        <div class="mt-text">
+          <div class="pname">${escapeHtml(HS.name)}</div>
+          <div class="tname">${escapeHtml(HS.teamName)}</div>
+        </div>
+      </div>
+      <div class="score-inputs">
+        <input type="number" min="0" max="99" value="${state.semifinal.hs ?? ''}"
+               oninput="setSemiScore('hs', this.value)">
+        <span class="x">×</span>
+        <input type="number" min="0" max="99" value="${state.semifinal.as ?? ''}"
+               oninput="setSemiScore('as', this.value)">
+      </div>
+      <div class="match-team away">
+        <div class="mt-text">
+          <div class="pname">${escapeHtml(AS.name)}</div>
+          <div class="tname">${escapeHtml(AS.teamName)}</div>
+        </div>
+        ${teamIconHtml(AS)}
+      </div>
+    </div>
+  `;
+
+  html += `<div class="round-title">Final</div>`;
+
+  if (!semiDone) {
+    html += `<div class="pending">⏳ Aguardando resultado da semifinal.</div>`;
+    state.final = { home: null, away: null, hs: null, as: null };
+  } else if (semiWinnerIdx === null) {
+    html += `<div class="pending">⚖️ Semifinal empatada — decidam nos pênaltis e ajustem o placar.</div>`;
+    state.final = { home: null, away: null, hs: null, as: null };
+  } else {
+    const newHome = first.idx;
+    const newAway = semiWinnerIdx;
+    if (!state.final || state.final.home !== newHome || state.final.away !== newAway) {
+      state.final = { home: newHome, away: newAway, hs: null, as: null };
+    }
+    html += buildFinalBoxHTML(state.final, '🏆 Grande Final 🏆', '1º Lugar', 'Vencedor da Semi');
+  }
+
+  container.innerHTML = html;
+                                            }
 
   // ---------- COPA COM FASE DE GRUPOS ----------
   if (!allPlayed) {
